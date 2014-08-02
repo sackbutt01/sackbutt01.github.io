@@ -1,0 +1,299 @@
+<!Doctype html>
+<html>
+<head>
+<center><title>The Educator Locator</title></center>
+<link rel="icon" type="image/ico" href="favicon.ico"/>
+<title>My webpage</title>
+<style type="text/css">
+body {
+	background-color:lightblue ;
+}
+#map-canvas { 
+	width: 500px;
+	height: 500px;
+}
+</style>
+
+</head>
+
+<body>
+<font color="black"><h1><u><center>School Tool</center></u></h1></font>
+<center><p><i><u><font size="4">The Educator Locator</font></u></i></p></center>
+<center>
+</center>
+<p><center>Distance</center><center><input id="distance" type="range" min="1" max="50" value="1" step="5" onchange="showValue1(this.value)" />
+<span id="range1">0</span>
+<script type="text/javascript">
+function showValue1(newValue)
+{
+	document.getElementById("range1").innerHTML=newValue;
+}
+</script></p>
+
+<p><center>Ofsted</center><input type="range" min="0" max="100" value="0" step="5" onchange="showValue2(this.value)" />
+<span id="range2">0</span>
+<script type="text/javascript">
+function showValue2(newValue)
+{
+	document.getElementById("range2").innerHTML=newValue;
+}
+</script></p>
+
+<p><center>Crime rate</center><input type="range" min="0" max="300" value="0" step="5" onchange="showValue3(this.value)" />
+<span id="range3">0</span>
+<script type="text/javascript">
+function showValue3(newValue)
+{
+
+  var bounds = map.getBounds()
+
+  getCrimeDetailWithRange(bounds.getNorthEast().lat(), bounds.getNorthEast().lng(), bounds.getSouthWest().lat(), bounds.getSouthWest().lng(), function(data){
+      console.log(data)
+      if(data.count >= newValue*10){
+        markersArray[i] = null
+      }
+  })
+
+	document.getElementById("range3").innerHTML=newValue;
+}
+</script></center>
+<center>
+<FORM NAME="searchbox">
+  
+    postcode/address: <input type="text" id="address" name="address" /> <br />
+    <input name="submit" type="button" onclick="changeLocation(document.getElementById('address').value,document.getElementById('distance').value);" value="Update" />
+</FORM>
+</center>
+<center>
+
+<div id="map-canvas"><div>
+
+</center></p>
+<center>
+
+<h1><p>number of crimes commited in the past month</p></h1>
+  <div id="crimeBox"></div>
+
+
+<table style="width:700px">
+<tr>
+  <th>overall effectiveness</th>
+  <th>Acheivement of pupils</th> 
+  <th>Quality of teaching</th>
+  <th>Behaviour and safety of pupils</th>
+  <th>Leadership and management</th>
+</tr>
+<tr>
+  <td><center>Outstanding    1</center></td>
+  <td><center>Outstanding    1</center></td> 
+  <td><center>Outstanding    1</center></td>
+  <td><center>Outstanding    1</center></td>
+  <td><center>Outstanding    1</center></td>
+</tr>
+<style>
+table,th,td
+{
+border:1px solid black;
+}
+</style>
+</table>
+</center>
+
+
+
+
+<script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=places&key=AIzaSyD40ovg1yucHN1YSci_Jk_zIZNEjBphKCU">
+    </script>
+    <script type="text/javascript">
+var map;
+var infowindow;
+var geocoder;
+var defaultCenter = new google.maps.LatLng(51.5072, 0.1275);
+var markersArray = [];
+var currentLocation;
+var crimeData;
+
+function initialize() {
+
+  map = new google.maps.Map(document.getElementById('map-canvas'), {
+    center: defaultCenter,
+    zoom: 15
+  });
+
+  infowindow = new google.maps.InfoWindow();
+}
+
+function changeLocation(address,distance) {
+  console.log(address);
+  clearmarkers();
+
+      geocoder = new google.maps.Geocoder();
+    var myOptions = {
+      zoom: 8,
+      center: defaultCenter,
+    mapTypeControl: true,
+    mapTypeControlOptions: {style: google.maps.MapTypeControlStyle.DROPDOWN_MENU},
+    navigationControl: true,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    <!--map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);-->
+    if (geocoder)
+    {
+      geocoder.geocode( { 'address': address}, function(results, status) {
+        if (status == google.maps.GeocoderStatus.OK) {
+          if (status != google.maps.GeocoderStatus.ZERO_RESULTS)
+          {
+            map.setCenter(results[0].geometry.location);
+            updateSearchLocation(results[0].geometry.location,distance);
+          } else {
+            alert("No results found");
+          }
+        } else {
+          alert("Geocode was not successful for the following reason: " + status);
+        }
+      });
+    }
+}
+
+function callback(results, status) {
+  if (status == google.maps.places.PlacesServiceStatus.OK) {
+    for (var i = 0; i < results.length; i++) {
+      var mapMarker = createMarker(results[i]);
+      markersArray.push(mapMarker);
+    }
+  }
+}
+
+function createMarker(place) {
+  var placeLoc = place.geometry.location;
+  var marker = new google.maps.Marker({
+    map: map,
+    position: place.geometry.location
+  });
+
+  google.maps.event.addListener(marker, 'click', function() {
+    infowindow.setContent(place.name);
+    infowindow.open(map, this);
+
+    updatesearchtype(marker.position);
+
+    clearmarkers();
+
+
+  });
+
+  return marker;
+}
+
+function clearmarkers() {
+  for (var i = 0; i < markersArray.length; i++) {
+      markersArray[i].setMap(null);
+    }
+  }
+
+function updateSearchLocation(newLocation,distance)
+{
+  alert("updating location....."); 
+
+  var newRequest = {
+    location: newLocation,
+    radius: distance*1000,
+    types: ['school']
+  };
+
+   currentLocation = newLocation;
+
+  var newService = new google.maps.places.PlacesService(map);
+  newService.nearbySearch(newRequest, callback);
+}
+
+function updatesearchtype(newtype)
+{
+  alert("updating type.....");
+
+var newRequest = {
+    location: currentLocation,
+    radius: 1500,
+    types: ['subway_station','train_station']
+
+}
+
+
+    var newService = new google.maps.places.PlacesService(map);
+  newService.nearbySearch(newRequest, callback);
+
+    crimeData = getCrimeDetail(currentLocation.lat(),currentLocation.lng(), processCrimeDetail);
+
+}
+ 
+ function getCrimeDetail(lat, lng, cb)
+ {
+
+  var today = new Date();
+  today.setDate(1);
+  today.setMonth(today.getMonth() - 3);
+
+  var policeApi = "http://data.police.uk/api/crimes-street/all-crime?lat=" + lat + "&lng=" + lng + "&date=" + today.getFullYear() + "-" + (today.getMonth() + 1);
+
+  var proxy = "https://jsonp.nodejitsu.com/?url=";
+
+  var requestUri = proxy + encodeURIComponent(policeApi);
+
+  $.get(requestUri, function(data)
+  {
+
+    cb(data)
+
+  });
+
+}
+
+ function getCrimeDetailWithRange(nelat, nelng, swlat, swlng, cb)
+ {
+
+  var today = new Date();
+  today.setDate(1);
+  today.setMonth(today.getMonth() - 3);
+
+  var policeApi = "http://data.police.uk/api/crimes-street/all-crime?poly=" + nelat + "," + nelng + ":" + swlat + "," + swlng +"&date=" + today.getFullYear() + "-" + (today.getMonth() + 1);
+
+  var proxy = "https://jsonp.nodejitsu.com/?url=";
+
+  var requestUri = proxy + encodeURIComponent(policeApi);
+
+  $.get(requestUri, function(data)
+  {
+
+    cb(data)
+
+  });
+
+}
+
+function processCrimeDetail(data){
+    $("#crimeBox").html("<h1>" + data.length + "</h1>");
+    
+    if (data.length > 1500)
+    {
+      document.getElementById("crimeBox").style.color = 'red';
+    } else if(data.length > 700) {
+      document.getElementById("crimeBox").style.color = 'orange';
+    } else if(data.length > 500) {
+      document.getElementById("crimeBox").style.color = 'yellow';
+    } else if(data.length > 300) {
+      document.getElementById("crimeBox").style.color = 'green';
+    } else {
+      document.getElementById("crimeBox").style.color = 'darkgreen';
+    }
+}
+
+
+
+google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+    
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+</body>
+</html>
